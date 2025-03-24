@@ -109,6 +109,14 @@ class _TaskListState extends State<TaskList> {
     });
   }
 
+  void editTask(Task task) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => AddTask(onAdd: updateTask, taskToEdit: task),
+      ),
+    );
+  }
+
   void _sortTasks() {
     tasks.sort((a, b) {
       if (a.isCompleted && !b.isCompleted) return 1;
@@ -157,14 +165,12 @@ class _TaskListState extends State<TaskList> {
           if (b == 'Completed') return -1;
           if (a == 'No date') return 1;
           if (b == 'No date') return -1;
-
           final aParts = a.split('/').map(int.parse).toList();
           final bParts = b.split('/').map(int.parse).toList();
           final aDate = DateTime(aParts[2], aParts[1], aParts[0]);
           final bDate = DateTime(bParts[2], bParts[1], bParts[0]);
           return aDate.compareTo(bDate);
         });
-
     return Scaffold(
       appBar: AppBar(
         title: Text('To-Do List'),
@@ -212,7 +218,6 @@ class _TaskListState extends State<TaskList> {
                   final dateKey = sortedDates[groupIndex];
                   final tasksInGroup = groupedTasks[dateKey]!;
                   if (tasksInGroup.isEmpty) return SizedBox.shrink();
-
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -244,6 +249,7 @@ class _TaskListState extends State<TaskList> {
                                   MaterialPageRoute(
                                     builder:
                                         (context) => TaskDetail(
+                                          key: ValueKey(task.id),
                                           task: task,
                                           onUpdate: updateTask,
                                           onDelete: () => deleteTask(task.id),
@@ -267,6 +273,7 @@ class _TaskListState extends State<TaskList> {
                                   );
                                   updateTask(updatedTask);
                                 },
+                                onEditPressed: () => editTask(task),
                               ),
                             ),
                           )

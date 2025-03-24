@@ -6,12 +6,13 @@ class TaskItem extends StatelessWidget {
   final VoidCallback onToggle;
   final VoidCallback onDelete;
   final Function(String) onEdit;
-
+  final VoidCallback onEditPressed;
   TaskItem({
     required this.task,
     required this.onToggle,
     required this.onDelete,
     required this.onEdit,
+    required this.onEditPressed,
   });
 
   @override
@@ -170,11 +171,17 @@ class TaskItem extends StatelessWidget {
                 ],
               ),
             ),
+            IconButton(
+              icon: Icon(Icons.edit, color: Colors.blue),
+              onPressed: onEditPressed,
+              tooltip: 'Edit Task',
+            ),
             PopupMenuButton<String>(
               icon: Icon(Icons.more_vert),
               onSelected: (value) {
                 switch (value) {
                   case 'edit':
+                    onEditPressed();
                     break;
                   case 'delete':
                     showDialog(
@@ -211,16 +218,6 @@ class TaskItem extends StatelessWidget {
               },
               itemBuilder:
                   (BuildContext context) => <PopupMenuEntry<String>>[
-                    PopupMenuItem<String>(
-                      value: 'edit',
-                      child: Row(
-                        children: [
-                          Icon(Icons.edit, size: 18),
-                          SizedBox(width: 8),
-                          Text('Edit'),
-                        ],
-                      ),
-                    ),
                     PopupMenuItem<String>(
                       value: 'toggle',
                       child: Row(

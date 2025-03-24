@@ -2,16 +2,48 @@ import 'package:flutter/material.dart';
 import 'task.dart';
 import 'add_task.dart';
 
-class TaskDetail extends StatelessWidget {
+class TaskDetail extends StatefulWidget {
   final Task task;
   final Function(Task) onUpdate;
   final VoidCallback onDelete;
 
   TaskDetail({
+    Key? key,
     required this.task,
     required this.onUpdate,
     required this.onDelete,
-  });
+  }) : super(key: key);
+
+  @override
+  _TaskDetailState createState() => _TaskDetailState();
+}
+
+class _TaskDetailState extends State<TaskDetail> {
+  late Task _currentTask;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentTask = widget.task;
+  }
+
+  @override
+  void didUpdateWidget(TaskDetail oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.task.id != oldWidget.task.id ||
+        widget.task.title != oldWidget.task.title ||
+        widget.task.description != oldWidget.task.description ||
+        widget.task.isCompleted != oldWidget.task.isCompleted) {
+      _currentTask = widget.task;
+    }
+  }
+
+  void _handleTaskUpdate(Task updatedTask) {
+    widget.onUpdate(updatedTask);
+    setState(() {
+      _currentTask = updatedTask;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -23,17 +55,15 @@ class TaskDetail extends StatelessWidget {
             icon: Icon(Icons.edit),
             tooltip: 'Edit Task',
             onPressed: () {
-              Navigator.of(context)
-                  .push(
-                    MaterialPageRoute(
-                      builder:
-                          (context) =>
-                              AddTask(onAdd: onUpdate, taskToEdit: task),
-                    ),
-                  )
-                  .then((_) {
-                    (context as Element).markNeedsBuild();
-                  });
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder:
+                      (context) => AddTask(
+                        onAdd: _handleTaskUpdate,
+                        taskToEdit: _currentTask,
+                      ),
+                ),
+              );
             },
           ),
           IconButton(
@@ -46,7 +76,7 @@ class TaskDetail extends StatelessWidget {
                   return AlertDialog(
                     title: Text('Delete Task'),
                     content: Text(
-                      'Are you sure you want to delete "${task.title}"?',
+                      'Are you sure you want to delete "${_currentTask.title}"?',
                     ),
                     actions: [
                       TextButton(
@@ -59,7 +89,7 @@ class TaskDetail extends StatelessWidget {
                         child: Text('DELETE'),
                         onPressed: () {
                           Navigator.of(dialogContext).pop();
-                          onDelete();
+                          widget.onDelete();
                           Navigator.of(context).pop();
                         },
                       ),
@@ -79,27 +109,29 @@ class TaskDetail extends StatelessWidget {
             Container(
               padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: task.isCompleted ? Colors.green : Colors.blue,
+                color: _currentTask.isCompleted ? Colors.green : Colors.blue,
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Text(
-                task.isCompleted ? 'Completed' : 'In Progress',
+                _currentTask.isCompleted ? 'Completed' : 'In Progress',
                 style: TextStyle(color: Colors.white),
               ),
             ),
             SizedBox(height: 16),
             Text(
-              task.title,
+              _currentTask.title,
               style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
                 decoration:
-                    task.isCompleted ? TextDecoration.lineThrough : null,
+                    _currentTask.isCompleted
+                        ? TextDecoration.lineThrough
+                        : null,
               ),
             ),
             SizedBox(height: 8),
             Divider(),
-            if (task.description.isNotEmpty) ...[
+            if (_currentTask.description.isNotEmpty) ...[
               Row(
                 children: [
                   Icon(Icons.description, color: Colors.grey),
@@ -118,18 +150,21 @@ class TaskDetail extends StatelessWidget {
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
-                  task.description,
+                  _currentTask.description,
                   style: TextStyle(
                     fontSize: 16,
                     decoration:
-                        task.isCompleted ? TextDecoration.lineThrough : null,
+                        _currentTask.isCompleted
+                            ? TextDecoration.lineThrough
+                            : null,
                   ),
                 ),
               ),
               SizedBox(height: 16),
               Divider(),
             ],
-            if (task.deadline != null || task.dueTime != null) ...[
+            if (_currentTask.deadline != null ||
+                _currentTask.dueTime != null) ...[
               Row(
                 children: [
                   Icon(Icons.event, color: Colors.grey),
@@ -150,36 +185,37 @@ class TaskDetail extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    if (task.deadline != null)
+                    if (_currentTask.deadline != null)
                       Row(
                         children: [
                           Icon(Icons.calendar_today, size: 16),
                           SizedBox(width: 8),
                           Text(
-                            'Date: ${task.getDueDateString()}',
+                            'Date: ${_currentTask.getDueDateString()}',
                             style: TextStyle(
                               fontSize: 16,
                               decoration:
-                                  task.isCompleted
+                                  _currentTask.isCompleted
                                       ? TextDecoration.lineThrough
                                       : null,
                             ),
                           ),
                         ],
                       ),
-                    if (task.deadline != null && task.dueTime != null)
+                    if (_currentTask.deadline != null &&
+                        _currentTask.dueTime != null)
                       SizedBox(height: 4),
-                    if (task.dueTime != null)
+                    if (_currentTask.dueTime != null)
                       Row(
                         children: [
                           Icon(Icons.access_time, size: 16),
                           SizedBox(width: 8),
                           Text(
-                            'Time: ${task.getDueTimeString()}',
+                            'Time: ${_currentTask.getDueTimeString()}',
                             style: TextStyle(
                               fontSize: 16,
                               decoration:
-                                  task.isCompleted
+                                  _currentTask.isCompleted
                                       ? TextDecoration.lineThrough
                                       : null,
                             ),
@@ -192,13 +228,13 @@ class TaskDetail extends StatelessWidget {
               SizedBox(height: 16),
               Divider(),
             ],
-            if (task.subTasks.isNotEmpty) ...[
+            if (_currentTask.subTasks.isNotEmpty) ...[
               Row(
                 children: [
                   Icon(Icons.checklist, color: Colors.grey),
                   SizedBox(width: 8),
                   Text(
-                    'Sub-Tasks (${task.subTasks.where((st) => st.isCompleted).length}/${task.subTasks.length}):',
+                    'Sub-Tasks (${_currentTask.subTasks.where((st) => st.isCompleted).length}/${_currentTask.subTasks.length}):',
                     style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
                 ],
@@ -211,7 +247,7 @@ class TaskDetail extends StatelessWidget {
                 ),
                 child: Column(
                   children:
-                      task.subTasks.asMap().entries.map((entry) {
+                      _currentTask.subTasks.asMap().entries.map((entry) {
                         final index = entry.key;
                         final subTask = entry.value;
                         return CheckboxListTile(
@@ -219,7 +255,8 @@ class TaskDetail extends StatelessWidget {
                             subTask.title,
                             style: TextStyle(
                               decoration:
-                                  subTask.isCompleted || task.isCompleted
+                                  subTask.isCompleted ||
+                                          _currentTask.isCompleted
                                       ? TextDecoration.lineThrough
                                       : null,
                             ),
@@ -227,25 +264,26 @@ class TaskDetail extends StatelessWidget {
                           value: subTask.isCompleted,
                           activeColor: Colors.green,
                           onChanged:
-                              task.isCompleted
+                              _currentTask.isCompleted
                                   ? null
                                   : (bool? value) {
                                     if (value != null) {
                                       final updatedSubTasks =
-                                          List<SubTask>.from(task.subTasks);
+                                          List<SubTask>.from(
+                                            _currentTask.subTasks,
+                                          );
                                       updatedSubTasks[index].isCompleted =
                                           value;
-
                                       final updatedTask = Task(
-                                        id: task.id,
-                                        title: task.title,
-                                        description: task.description,
-                                        isCompleted: task.isCompleted,
-                                        deadline: task.deadline,
-                                        dueTime: task.dueTime,
+                                        id: _currentTask.id,
+                                        title: _currentTask.title,
+                                        description: _currentTask.description,
+                                        isCompleted: _currentTask.isCompleted,
+                                        deadline: _currentTask.deadline,
+                                        dueTime: _currentTask.dueTime,
                                         subTasks: updatedSubTasks,
                                       );
-                                      onUpdate(updatedTask);
+                                      _handleTaskUpdate(updatedTask);
                                       ScaffoldMessenger.of(
                                         context,
                                       ).showSnackBar(
@@ -269,13 +307,16 @@ class TaskDetail extends StatelessWidget {
         ),
       ),
       floatingActionButton: FloatingActionButton.extended(
-        icon: Icon(task.isCompleted ? Icons.refresh : Icons.check),
-        label: Text(task.isCompleted ? 'Mark Incomplete' : 'Mark Complete'),
-        backgroundColor: task.isCompleted ? Colors.orange : Colors.green,
+        icon: Icon(_currentTask.isCompleted ? Icons.refresh : Icons.check),
+        label: Text(
+          _currentTask.isCompleted ? 'Mark Incomplete' : 'Mark Complete',
+        ),
+        backgroundColor:
+            _currentTask.isCompleted ? Colors.orange : Colors.green,
         onPressed: () {
           final List<SubTask> updatedSubTasks =
-              task.subTasks.map((subTask) {
-                if (!task.isCompleted) {
+              _currentTask.subTasks.map((subTask) {
+                if (!_currentTask.isCompleted) {
                   return SubTask(title: subTask.title, isCompleted: true);
                 }
                 return SubTask(
@@ -283,23 +324,22 @@ class TaskDetail extends StatelessWidget {
                   isCompleted: subTask.isCompleted,
                 );
               }).toList();
-
           final updatedTask = Task(
-            id: task.id,
-            title: task.title,
-            description: task.description,
-            isCompleted: !task.isCompleted,
-            deadline: task.deadline,
-            dueTime: task.dueTime,
+            id: _currentTask.id,
+            title: _currentTask.title,
+            description: _currentTask.description,
+            isCompleted: !_currentTask.isCompleted,
+            deadline: _currentTask.deadline,
+            dueTime: _currentTask.dueTime,
             subTasks: updatedSubTasks,
           );
-          onUpdate(updatedTask);
+          _handleTaskUpdate(updatedTask);
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
                 updatedTask.isCompleted
-                    ? 'Task "${task.title}" marked as completed'
-                    : 'Task "${task.title}" marked as incomplete',
+                    ? 'Task "${_currentTask.title}" marked as completed'
+                    : 'Task "${_currentTask.title}" marked as incomplete',
               ),
               duration: Duration(seconds: 2),
             ),
