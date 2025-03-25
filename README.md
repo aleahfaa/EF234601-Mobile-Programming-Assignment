@@ -37,7 +37,28 @@ This file defines how each task is displayed in the list.
 This file defines the data models for tasks andd sub-tasks. `SubTask` class represents a sub-task with an ID, title, and completion status. `Task` class represents a task with various properties (ID, title, description, completion status, deadline, due time, and list of sub-tasks)
 
 # Screenshot
-
+1. The blank page. This page will be displayed when a new user uses this application for the first time or if the user does not have any tasks. <br>
+![Image-1](img/screenshot-1742876743950.png)
+2. Click "Create" (`+`) button in the home page to add or create a new task. Then, the user will be directed to this page. <br>
+![Image-2](img/screenshot-1742876763000.png)
+3. Fill the form with the details of the user's task. <br>
+![Image-3](img/screenshot-1742876822262.png)
+4. Click "Save" button in the right bottom and _viola_ the user's task has been added to the list of the tasks. <br>
+![Image-4](img/screenshot-1742876833338.png)
+5. Click the task to see the task detail and this page will be displayed. <br>
+![Image-5](img/screenshot-1742876842099.png)
+6. The user can mark the sub-tasks completed, if it is already completed and the title of the sub-tasks will be strikethrough. <br>
+![Image-6](img/screenshot-1742876863976.png)
+7. If the user click the "Edit" button, the user will be able to update the information of the task. <br>
+![Image-7](img/screenshot-1742876900818.png)
+8. The `Task Details` page will update the information and show the updated information once the user click "Save" button to save the updated information. <br>
+![Image-8](img/screenshot-1742876909700.png)
+9. If the user mark the Task completed, then the task will be strikethrough. <br>
+![Image-9](img/screenshot-1742876919418.png)
+10. The user can click the "vertical ellipsis" (`⋮`) button in the right side of the task to delete the task. Before the task is deleted, the user will be asked to confirm whether they want to delete it or not. <br>
+![Image-10](img/screenshot-1742876932268.png)
+11. If the task succesfully deleted and there is no more task left, the blank page will be displayed. <br>
+![Image-11](img/screenshot-1742876939529.png)
 
 # Video
 [Video Link](https://drive.google.com/drive/folders/1rfV76XgCjYiCHYmew5ZsjqwmwH4QbaSC?usp=sharing)
