@@ -8,7 +8,7 @@
 </p>
 
 <p align="center">
-  <img src="Badge_ITS.png" width="50%">
+  <img src="img/Badge_ITS.png" width="50%">
 </p>
 
 <p>This project is computer program developed as part of Assignment 1 for the Mobile Programming class. This program is made by <a href="https://github.com/aleahfaa">Iffa Amalia Sabrina</a>.</p>
