@@ -32,28 +32,20 @@ class _TaskListState extends State<TaskList> {
     _loadTasks();
   }
 
-  void updateTask(Task updatedTask) {
-    print("Update Called");
-    print("ID: ${updatedTask.id}");
-    print("Title: ${updatedTask.title}");
-    print("Desc: ${updatedTask.description}");
-    print("isCompleted: ${updatedTask.isCompleted}");
+  void updateTask(Task newTask) {
     final taskBox = objectBox.store.box<Task>();
-    if (updatedTask.id == 0) {
-      print(
-        "[ERROR] Task ID is 0, tidak bisa update. Data baru akan ditambahkan!",
-      );
-    } else {
-      final exists = taskBox.contains(updatedTask.id);
-      if (exists) {
-        taskBox.put(updatedTask);
-        print("[SUCCESS] Task updated di database.");
-      } else {
-        print(
-          "[WARNING] ID ${updatedTask.id} tidak ditemukan di DB. Data baru akan ditambahkan.",
-        );
-        taskBox.put(updatedTask);
-      }
+
+    final oldTaskIndex = tasks.indexWhere((t) => t.id == newTask.id);
+    if (oldTaskIndex != -1) {
+      final oldTask = tasks[oldTaskIndex];
+      oldTask.title = newTask.title;
+      oldTask.description = newTask.description;
+      oldTask.deadline = newTask.deadline;
+      oldTask.dueTime = newTask.dueTime;
+      oldTask.isCompleted = newTask.isCompleted;
+      oldTask.subTasks.clear();
+      oldTask.subTasks.addAll(newTask.subTasks);
+      taskBox.put(oldTask);
     }
     _loadTasks();
   }
@@ -86,7 +78,7 @@ class _TaskListState extends State<TaskList> {
   }
 
   void editTask(Task task) {
-    print("Edit Task");
+    print("edit task");
     Navigator.of(context).push(
       MaterialPageRoute(
         builder:

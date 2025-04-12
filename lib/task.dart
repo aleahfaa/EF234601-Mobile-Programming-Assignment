@@ -9,8 +9,21 @@ class Task {
   String description;
   bool isCompleted;
   DateTime? deadline;
+  int? dueTimeMinutes;
   @Transient()
-  TimeOfDay? dueTime;
+  TimeOfDay? get dueTime {
+    if (dueTimeMinutes == null) return null;
+    return TimeOfDay(hour: dueTimeMinutes! ~/ 60, minute: dueTimeMinutes! % 60);
+  }
+
+  set dueTime(TimeOfDay? time) {
+    if (time == null) {
+      dueTimeMinutes = null;
+    } else {
+      dueTimeMinutes = time.hour * 60 + time.minute;
+    }
+  }
+
   @Backlink('task')
   final subTasks = ToMany<SubTask>();
   Task({
@@ -19,8 +32,11 @@ class Task {
     this.description = '',
     this.isCompleted = false,
     this.deadline,
-    this.dueTime,
-  });
+    TimeOfDay? dueTime,
+  }) {
+    this.dueTime = dueTime;
+  }
+
   DateTime? getFullDueDateTime() {
     if (deadline == null) return null;
     if (dueTime == null) return deadline;
