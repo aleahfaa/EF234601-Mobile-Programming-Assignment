@@ -14,7 +14,6 @@ class TaskItem extends StatelessWidget {
     required this.onEdit,
     required this.onEditPressed,
   });
-
   @override
   Widget build(BuildContext context) {
     bool isOverdue = false;
@@ -26,7 +25,6 @@ class TaskItem extends StatelessWidget {
         task.deadline!.month,
         task.deadline!.day,
       );
-
       if (dueDate.isBefore(today)) {
         isOverdue = true;
       } else if (dueDate.isAtSameMomentAs(today) && task.dueTime != null) {
@@ -38,7 +36,6 @@ class TaskItem extends StatelessWidget {
         }
       }
     }
-
     return Card(
       margin: EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
       elevation: 2.0,
@@ -130,7 +127,6 @@ class TaskItem extends StatelessWidget {
                         ),
                         SizedBox(width: 8),
                       ],
-
                       if (task.dueTime != null) ...[
                         Icon(
                           Icons.access_time,
@@ -157,7 +153,6 @@ class TaskItem extends StatelessWidget {
                         ),
                         SizedBox(width: 8),
                       ],
-
                       if (task.subTasks.isNotEmpty) ...[
                         Icon(Icons.checklist, size: 12, color: Colors.blue),
                         SizedBox(width: 4),

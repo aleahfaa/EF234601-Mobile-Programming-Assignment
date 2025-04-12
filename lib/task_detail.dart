@@ -6,21 +6,18 @@ class TaskDetail extends StatefulWidget {
   final Task task;
   final Function(Task) onUpdate;
   final VoidCallback onDelete;
-
   TaskDetail({
     Key? key,
     required this.task,
     required this.onUpdate,
     required this.onDelete,
   }) : super(key: key);
-
   @override
   _TaskDetailState createState() => _TaskDetailState();
 }
 
 class _TaskDetailState extends State<TaskDetail> {
   late Task _currentTask;
-
   @override
   void initState() {
     super.initState();
@@ -275,13 +272,15 @@ class _TaskDetailState extends State<TaskDetail> {
                                       updatedSubTasks[index].isCompleted =
                                           value;
                                       final updatedTask = Task(
-                                        id: _currentTask.id,
                                         title: _currentTask.title,
                                         description: _currentTask.description,
                                         isCompleted: _currentTask.isCompleted,
                                         deadline: _currentTask.deadline,
                                         dueTime: _currentTask.dueTime,
-                                        subTasks: updatedSubTasks,
+                                      );
+                                      updatedTask.id = _currentTask.id;
+                                      updatedTask.subTasks.addAll(
+                                        updatedSubTasks,
                                       );
                                       _handleTaskUpdate(updatedTask);
                                       ScaffoldMessenger.of(
@@ -325,14 +324,14 @@ class _TaskDetailState extends State<TaskDetail> {
                 );
               }).toList();
           final updatedTask = Task(
-            id: _currentTask.id,
             title: _currentTask.title,
             description: _currentTask.description,
             isCompleted: !_currentTask.isCompleted,
             deadline: _currentTask.deadline,
             dueTime: _currentTask.dueTime,
-            subTasks: updatedSubTasks,
           );
+          updatedTask.id = _currentTask.id;
+          updatedTask.subTasks.addAll(updatedSubTasks);
           _handleTaskUpdate(updatedTask);
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(

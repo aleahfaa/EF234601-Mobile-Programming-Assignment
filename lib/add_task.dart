@@ -4,9 +4,7 @@ import 'task.dart';
 class AddTask extends StatefulWidget {
   final Function(Task) onAdd;
   final Task? taskToEdit;
-
   AddTask({required this.onAdd, this.taskToEdit});
-
   @override
   _AddTaskState createState() => _AddTaskState();
 }
@@ -20,7 +18,6 @@ class _AddTaskState extends State<AddTask> {
   List<SubTask> _subTasks = [];
   bool _isEditing = false;
   String? _taskId;
-
   @override
   void initState() {
     super.initState();
@@ -29,7 +26,8 @@ class _AddTaskState extends State<AddTask> {
     _subTaskController = TextEditingController();
     if (widget.taskToEdit != null) {
       _isEditing = true;
-      _taskId = widget.taskToEdit!.id;
+      print("ID EDIT " + widget.taskToEdit!.id.toString());
+      _taskId = widget.taskToEdit!.id.toString();
       _titleController.text = widget.taskToEdit!.title;
       _descriptionController.text = widget.taskToEdit!.description;
       _deadline = widget.taskToEdit!.deadline;
@@ -249,15 +247,17 @@ class _AddTaskState extends State<AddTask> {
             return;
           }
           final task = Task(
-            id: _isEditing ? _taskId : null,
+            id: _isEditing ? widget.taskToEdit!.id : 0,
             title: _titleController.text,
             description: _descriptionController.text,
             deadline: _deadline,
             dueTime: _dueTime,
-            subTasks: _subTasks,
             isCompleted: _isEditing ? widget.taskToEdit!.isCompleted : false,
           );
+          task.subTasks.addAll(_subTasks);
           widget.onAdd(task);
+          print('[DEBUG] onAdd telah dipanggil dengan task: ${task.title}');
+          print('[DEBUG] Tipe onAdd: ${widget.onAdd.runtimeType}');
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
@@ -268,7 +268,6 @@ class _AddTaskState extends State<AddTask> {
               duration: Duration(seconds: 2),
             ),
           );
-
           Navigator.of(context).pop();
         },
         child: Icon(Icons.save),

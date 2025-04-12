@@ -1,3 +1,4 @@
+import 'package:assignment1/main.dart';
 import 'package:flutter/material.dart';
 import 'task.dart';
 import 'add_task.dart';
@@ -5,134 +6,94 @@ import 'task_item.dart';
 import 'task_detail.dart';
 
 class TaskList extends StatefulWidget {
+  TaskList();
   @override
   _TaskListState createState() => _TaskListState();
 }
 
 class _TaskListState extends State<TaskList> {
   List<Task> tasks = [];
+  @override
+  void initState() {
+    _loadTasks();
+    super.initState();
+  }
+
+  Future<void> _loadTasks() async {
+    final taskBox = objectBox.store.box<Task>();
+    tasks = taskBox.getAll();
+    setState(() {});
+  }
+
   void addTask(Task task) {
-    setState(() {
-      tasks.add(task);
-      _sortTasks();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Task "${task.title}" added'),
-          duration: Duration(seconds: 2),
-          action: SnackBarAction(
-            label: 'UNDO',
-            onPressed: () {
-              setState(() {
-                tasks.removeWhere((t) => t.id == task.id);
-              });
-            },
-          ),
-        ),
-      );
-    });
+    print(objectBox);
+    final taskBox = objectBox.store.box<Task>();
+    taskBox.put(task);
+    _loadTasks();
   }
 
   void updateTask(Task updatedTask) {
-    setState(() {
-      final index = tasks.indexWhere((task) => task.id == updatedTask.id);
-      if (index != -1) {
-        final oldTask = tasks[index];
-        tasks[index] = updatedTask;
-        _sortTasks();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Task "${updatedTask.title}" updated'),
-            duration: Duration(seconds: 2),
-            action: SnackBarAction(
-              label: 'UNDO',
-              onPressed: () {
-                setState(() {
-                  tasks[tasks.indexWhere((task) => task.id == updatedTask.id)] =
-                      oldTask;
-                  _sortTasks();
-                });
-              },
-            ),
-          ),
+    print("Update Called");
+    print("ID: ${updatedTask.id}");
+    print("Title: ${updatedTask.title}");
+    print("Desc: ${updatedTask.description}");
+    print("isCompleted: ${updatedTask.isCompleted}");
+    final taskBox = objectBox.store.box<Task>();
+    if (updatedTask.id == 0) {
+      print(
+        "[ERROR] Task ID is 0, tidak bisa update. Data baru akan ditambahkan!",
+      );
+    } else {
+      final exists = taskBox.contains(updatedTask.id);
+      if (exists) {
+        taskBox.put(updatedTask);
+        print("[SUCCESS] Task updated di database.");
+      } else {
+        print(
+          "[WARNING] ID ${updatedTask.id} tidak ditemukan di DB. Data baru akan ditambahkan.",
         );
+        taskBox.put(updatedTask);
       }
-    });
+    }
+    _loadTasks();
   }
 
-  void deleteTask(String taskId) {
-    final index = tasks.indexWhere((task) => task.id == taskId);
-    if (index == -1) return;
-    final deletedTask = tasks[index];
+  void deleteTask(int taskId) {
+    final taskBox = objectBox.store.box<Task>();
+    taskBox.remove(taskId);
+    _loadTasks();
+  }
 
-    setState(() {
-      tasks.removeAt(index);
+  void toggleTaskCompletion(int taskId) {
+    final taskBox = objectBox.store.box<Task>();
+    final index = tasks.indexWhere((task) => task.id == taskId);
+    if (index != -1) {
+      final updatedTask = tasks[index];
+      updatedTask.isCompleted = !updatedTask.isCompleted;
+      taskBox.put(updatedTask);
+      _loadTasks();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Task "${deletedTask.title}" deleted'),
-          duration: Duration(seconds: 3),
-          action: SnackBarAction(
-            label: 'UNDO',
-            onPressed: () {
-              setState(() {
-                tasks.add(deletedTask);
-                _sortTasks();
-              });
-            },
+          content: Text(
+            updatedTask.isCompleted
+                ? 'Task "${updatedTask.title}" completed'
+                : 'Task "${updatedTask.title}" marked as incomplete',
           ),
+          duration: Duration(seconds: 2),
         ),
       );
-    });
-  }
-
-  void toggleTaskCompletion(String taskId) {
-    setState(() {
-      final index = tasks.indexWhere((task) => task.id == taskId);
-      if (index != -1) {
-        final updatedTask = tasks[index];
-        updatedTask.isCompleted = !updatedTask.isCompleted;
-        if (updatedTask.isCompleted) {
-          for (var subTask in updatedTask.subTasks) {
-            subTask.isCompleted = true;
-          }
-        }
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              updatedTask.isCompleted
-                  ? 'Task "${updatedTask.title}" completed'
-                  : 'Task "${updatedTask.title}" marked as incomplete',
-            ),
-            duration: Duration(seconds: 2),
-          ),
-        );
-      }
-    });
+    }
   }
 
   void editTask(Task task) {
+    print("Edit Task");
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (context) => AddTask(onAdd: updateTask, taskToEdit: task),
+        builder:
+            (context) =>
+                AddTask(onAdd: (task) => updateTask(task), taskToEdit: task),
       ),
     );
-  }
-
-  void _sortTasks() {
-    tasks.sort((a, b) {
-      if (a.isCompleted && !b.isCompleted) return 1;
-      if (!a.isCompleted && b.isCompleted) return -1;
-      if (a.deadline == null && b.deadline == null) return 0;
-      if (a.deadline == null) return 1;
-      if (b.deadline == null) return -1;
-      final dateComparison = a.deadline!.compareTo(b.deadline!);
-      if (dateComparison != 0) return dateComparison;
-      if (a.dueTime == null && b.dueTime == null) return 0;
-      if (a.dueTime == null) return 1;
-      if (b.dueTime == null) return -1;
-      final aMinutes = a.dueTime!.hour * 60 + a.dueTime!.minute;
-      final bMinutes = b.dueTime!.hour * 60 + b.dueTime!.minute;
-      return aMinutes.compareTo(bMinutes);
-    });
   }
 
   Map<String, List<Task>> _getGroupedTasks() {
@@ -263,17 +224,22 @@ class _TaskListState extends State<TaskList> {
                                 onDelete: () => deleteTask(task.id),
                                 onEdit: (title) {
                                   final updatedTask = Task(
-                                    id: task.id,
                                     title: title,
                                     description: task.description,
                                     isCompleted: task.isCompleted,
                                     deadline: task.deadline,
                                     dueTime: task.dueTime,
-                                    subTasks: task.subTasks,
                                   );
+                                  updatedTask.id = task.id;
+                                  print("ON EDIT presen");
                                   updateTask(updatedTask);
                                 },
-                                onEditPressed: () => editTask(task),
+                                onEditPressed: () {
+                                  print("ON EDIT task");
+                                  print(task.id);
+
+                                  editTask(task);
+                                },
                               ),
                             ),
                           )

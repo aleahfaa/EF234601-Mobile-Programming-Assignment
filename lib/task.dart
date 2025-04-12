@@ -1,35 +1,29 @@
 import 'package:flutter/material.dart';
+import 'package:objectbox/objectbox.dart';
 
-class SubTask {
-  String id;
-  String title;
-  bool isCompleted;
-  SubTask({required this.title, this.isCompleted = false})
-    : id = DateTime.now().millisecondsSinceEpoch.toString();
-}
-
+@Entity()
 class Task {
-  String id;
+  @Id()
+  int id = 0;
   String title;
   String description;
   bool isCompleted;
   DateTime? deadline;
+  @Transient()
   TimeOfDay? dueTime;
-  List<SubTask> subTasks;
+  @Backlink('task')
+  final subTasks = ToMany<SubTask>();
   Task({
-    String? id,
+    this.id = 0,
     required this.title,
     this.description = '',
     this.isCompleted = false,
     this.deadline,
     this.dueTime,
-    List<SubTask>? subTasks,
-  }) : id = id ?? DateTime.now().millisecondsSinceEpoch.toString(),
-       subTasks = subTasks ?? [];
+  });
   DateTime? getFullDueDateTime() {
     if (deadline == null) return null;
     if (dueTime == null) return deadline;
-
     return DateTime(
       deadline!.year,
       deadline!.month,
@@ -50,4 +44,14 @@ class Task {
     final minute = dueTime!.minute.toString().padLeft(2, '0');
     return '$hour:$minute';
   }
+}
+
+@Entity()
+class SubTask {
+  @Id()
+  int id = 0;
+  String title;
+  bool isCompleted;
+  final task = ToOne<Task>();
+  SubTask({required this.title, this.isCompleted = false});
 }
