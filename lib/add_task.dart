@@ -26,7 +26,6 @@ class _AddTaskState extends State<AddTask> {
     _subTaskController = TextEditingController();
     if (widget.taskToEdit != null) {
       _isEditing = true;
-      print("ID EDIT " + widget.taskToEdit!.id.toString());
       _taskId = widget.taskToEdit!.id.toString();
       _titleController.text = widget.taskToEdit!.title;
       _descriptionController.text = widget.taskToEdit!.description;
@@ -256,8 +255,6 @@ class _AddTaskState extends State<AddTask> {
           );
           task.subTasks.addAll(_subTasks);
           widget.onAdd(task);
-          print('[DEBUG] onAdd telah dipanggil dengan task: ${task.title}');
-          print('[DEBUG] Tipe onAdd: ${widget.onAdd.runtimeType}');
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(

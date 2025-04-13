@@ -4,6 +4,7 @@ import 'task.dart';
 import 'add_task.dart';
 import 'task_item.dart';
 import 'task_detail.dart';
+import 'task_search_delegate.dart';
 
 class TaskList extends StatefulWidget {
   TaskList();
@@ -13,6 +14,8 @@ class TaskList extends StatefulWidget {
 
 class _TaskListState extends State<TaskList> {
   List<Task> tasks = [];
+  List<Task> filteredTasks = [];
+  String searchQuery = '';
   @override
   void initState() {
     _loadTasks();
@@ -22,11 +25,21 @@ class _TaskListState extends State<TaskList> {
   Future<void> _loadTasks() async {
     final taskBox = objectBox.store.box<Task>();
     tasks = taskBox.getAll();
+    filteredTasks = tasks;
     setState(() {});
   }
 
+  void _updateSearchQuery(String query) {
+    setState(() {
+      searchQuery = query;
+      filteredTasks =
+          tasks.where((task) {
+            return task.title.toLowerCase().contains(searchQuery.toLowerCase());
+          }).toList();
+    });
+  }
+
   void addTask(Task task) {
-    print(objectBox);
     final taskBox = objectBox.store.box<Task>();
     taskBox.put(task);
     _loadTasks();
@@ -78,7 +91,6 @@ class _TaskListState extends State<TaskList> {
   }
 
   void editTask(Task task) {
-    print("edit task");
     Navigator.of(context).push(
       MaterialPageRoute(
         builder:
@@ -131,8 +143,12 @@ class _TaskListState extends State<TaskList> {
           IconButton(
             icon: Icon(Icons.search),
             onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Search feature coming soon')),
+              showSearch(
+                context: context,
+                delegate: TaskSearchDelegate(
+                  tasks: tasks,
+                  onSearch: _updateSearchQuery,
+                ),
               );
             },
           ),
@@ -223,13 +239,9 @@ class _TaskListState extends State<TaskList> {
                                     dueTime: task.dueTime,
                                   );
                                   updatedTask.id = task.id;
-                                  print("ON EDIT presen");
                                   updateTask(updatedTask);
                                 },
                                 onEditPressed: () {
-                                  print("ON EDIT task");
-                                  print(task.id);
-
                                   editTask(task);
                                 },
                               ),
