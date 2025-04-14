@@ -1,4 +1,4 @@
-# Assignment 1
+# Assignment 2
 ## Overview
 This CRUD (Create, Read, Update, Delete) mobile application is created using Flutter with ObjectBox as the database. This application is inspired by any existing To-Do-List applications, especially Google Task as I mainly use that in my daily basis. This application is created to make it easier for users to organize their tasks or works.
 
@@ -34,8 +34,10 @@ dev_dependencies:
     build_runner: ^2.4.15
     objectbox_generator: ^4.1.0
 ```
-2. Generate `ObjectBox` code by running the command below to the Terminal. <br>
-`flutter pub run build_runner build`
+2. Generate `ObjectBox` code by running the command below to the Terminal.
+```
+flutter pub run build_runner build
+```
 3. Write your code.
 
 ## Screenshot
