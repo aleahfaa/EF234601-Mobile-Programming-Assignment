@@ -55,5 +55,5 @@ flutter pub run build_runner build
 ![Image-6](img/2/6.png)
 7. The user can click the "vertical ellipsis" (`⋮`) button in the right side of the task to delete the task. Before the task is deleted, the user will be asked to confirm whether they want to delete it or not. <br>
 ![Image-10](img/2/7.png)
-11. If the task succesfully deleted and there is no more task left, the blank page will be displayed. <br>
+8. If the task succesfully deleted and there is no more task left, the blank page will be displayed. <br>
 ![Image-11](img/2/8.png)
