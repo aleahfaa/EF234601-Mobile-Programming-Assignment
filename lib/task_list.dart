@@ -65,8 +65,26 @@ class _TaskListState extends State<TaskList> {
 
   void deleteTask(int taskId) {
     final taskBox = objectBox.store.box<Task>();
-    taskBox.remove(taskId);
-    _loadTasks();
+    final deletedTaskIndex = tasks.indexWhere((task) => task.id == taskId);
+    if (deletedTaskIndex != -1) {
+      final deletedTask = tasks[deletedTaskIndex];
+      taskBox.remove(taskId);
+      _loadTasks();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Task "${deletedTask.title}" deleted'),
+          duration: Duration(seconds: 3),
+          action: SnackBarAction(
+            label: 'UNDO',
+            onPressed: () {
+              final taskBox = objectBox.store.box<Task>();
+              taskBox.put(deletedTask);
+              _loadTasks();
+            },
+          ),
+        ),
+      );
+    }
   }
 
   void toggleTaskCompletion(int taskId) {
