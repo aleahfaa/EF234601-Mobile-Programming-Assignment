@@ -1,13 +1,15 @@
-import 'package:assignment1/main.dart';
 import 'package:flutter/material.dart';
+import 'package:todolist/main.dart';
 import 'task.dart';
 import 'add_task.dart';
-import 'task_item.dart';
 import 'task_detail.dart';
 import 'task_search_delegate.dart';
+import 'settings_screen.dart';
+import 'task_item.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class TaskList extends StatefulWidget {
-  TaskList();
+  const TaskList({super.key});
   @override
   _TaskListState createState() => _TaskListState();
 }
@@ -16,17 +18,61 @@ class _TaskListState extends State<TaskList> {
   List<Task> tasks = [];
   List<Task> filteredTasks = [];
   String searchQuery = '';
+  Map<int, List<bool>> _previousSubtaskStates = {};
   @override
   void initState() {
     _loadTasks();
+    _setupNotificationListeners();
     super.initState();
+  }
+
+  @override
+  void dispose() {
+    notificationService.dispose();
+    super.dispose();
+  }
+
+  void _setupNotificationListeners() {
+    notificationService.setupNotificationActionListeners((taskId) {
+      if (taskId != null) {
+        _openTaskFromNotification(int.parse(taskId));
+      }
+    });
+  }
+
+  void _openTaskFromNotification(int taskId) {
+    try {
+      final task = tasks.firstWhere((task) => task.id == taskId);
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder:
+              (context) => TaskDetail(
+                key: ValueKey(task.id),
+                task: task,
+                onUpdate: updateTask,
+                onDelete: () => deleteTask(task.id),
+                previousSubtaskStates: _previousSubtaskStates,
+                onSubtaskStatesChanged: (taskId, states) {
+                  setState(() {
+                    _previousSubtaskStates[taskId] = states;
+                  });
+                },
+              ),
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Task not found')));
+    }
   }
 
   Future<void> _loadTasks() async {
     final taskBox = objectBox.store.box<Task>();
-    tasks = taskBox.getAll();
-    filteredTasks = tasks;
-    setState(() {});
+    setState(() {
+      tasks = taskBox.getAll();
+      filteredTasks = tasks;
+    });
   }
 
   void _updateSearchQuery(String query) {
@@ -39,18 +85,22 @@ class _TaskListState extends State<TaskList> {
     });
   }
 
-  void addTask(Task task) {
+  Future<void> addTask(Task task) async {
     final taskBox = objectBox.store.box<Task>();
     taskBox.put(task);
-    _loadTasks();
+    await _loadTasks();
+    if (task.deadline != null) {
+      await notificationService.scheduleTaskReminderNotification(task);
+    }
   }
 
-  void updateTask(Task newTask) {
+  Future<void> updateTask(Task newTask) async {
     final taskBox = objectBox.store.box<Task>();
-
     final oldTaskIndex = tasks.indexWhere((t) => t.id == newTask.id);
     if (oldTaskIndex != -1) {
       final oldTask = tasks[oldTaskIndex];
+      final wasCompleted = oldTask.isCompleted;
+      final oldSubtasks = List<SubTask>.from(oldTask.subTasks);
       oldTask.title = newTask.title;
       oldTask.description = newTask.description;
       oldTask.deadline = newTask.deadline;
@@ -59,8 +109,23 @@ class _TaskListState extends State<TaskList> {
       oldTask.subTasks.clear();
       oldTask.subTasks.addAll(newTask.subTasks);
       taskBox.put(oldTask);
+      await _loadTasks();
+      if (!wasCompleted && newTask.isCompleted) {
+        await notificationService.sendTaskCompletionNotification(newTask);
+      }
+      if (newTask.subTasks.isNotEmpty &&
+          newTask.subTasks.every((subtask) => subtask.isCompleted) &&
+          !oldSubtasks.every((subtask) => subtask.isCompleted)) {
+        await notificationService.sendAllSubtasksCompletionNotification(
+          newTask,
+        );
+      }
+      if (newTask.deadline != null) {
+        await notificationService.scheduleTaskReminderNotification(newTask);
+      } else {
+        await notificationService.cancelTaskNotification(newTask);
+      }
     }
-    _loadTasks();
   }
 
   void deleteTask(int taskId) {
@@ -68,8 +133,10 @@ class _TaskListState extends State<TaskList> {
     final deletedTaskIndex = tasks.indexWhere((task) => task.id == taskId);
     if (deletedTaskIndex != -1) {
       final deletedTask = tasks[deletedTaskIndex];
+      notificationService.cancelTaskNotification(deletedTask);
       taskBox.remove(taskId);
       _loadTasks();
+      _previousSubtaskStates.remove(taskId);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Task "${deletedTask.title}" deleted'),
@@ -80,6 +147,11 @@ class _TaskListState extends State<TaskList> {
               final taskBox = objectBox.store.box<Task>();
               taskBox.put(deletedTask);
               _loadTasks();
+              if (deletedTask.deadline != null) {
+                notificationService.scheduleTaskReminderNotification(
+                  deletedTask,
+                );
+              }
             },
           ),
         ),
@@ -87,14 +159,38 @@ class _TaskListState extends State<TaskList> {
     }
   }
 
-  void toggleTaskCompletion(int taskId) {
+  Future<void> toggleTaskCompletion(int taskId) async {
     final taskBox = objectBox.store.box<Task>();
     final index = tasks.indexWhere((task) => task.id == taskId);
     if (index != -1) {
       final updatedTask = tasks[index];
-      updatedTask.isCompleted = !updatedTask.isCompleted;
+      final wasCompleted = updatedTask.isCompleted;
+      if (!wasCompleted) {
+        _previousSubtaskStates[taskId] =
+            updatedTask.subTasks.map((subtask) => subtask.isCompleted).toList();
+        updatedTask.isCompleted = true;
+        for (var subtask in updatedTask.subTasks) {
+          subtask.isCompleted = true;
+        }
+      } else {
+        updatedTask.isCompleted = false;
+        if (_previousSubtaskStates.containsKey(taskId)) {
+          final previousStates = _previousSubtaskStates[taskId]!;
+          for (
+            int i = 0;
+            i < updatedTask.subTasks.length && i < previousStates.length;
+            i++
+          ) {
+            updatedTask.subTasks[i].isCompleted = previousStates[i];
+          }
+          _previousSubtaskStates.remove(taskId);
+        }
+      }
       taskBox.put(updatedTask);
-      _loadTasks();
+      await _loadTasks();
+      if (!wasCompleted && updatedTask.isCompleted) {
+        await notificationService.sendTaskCompletionNotification(updatedTask);
+      }
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
@@ -108,6 +204,22 @@ class _TaskListState extends State<TaskList> {
     }
   }
 
+  Future<void> toggleSubtaskCompletion(Task task, int subtaskIndex) async {
+    final subtask = task.subTasks[subtaskIndex];
+    final wasCompleted = subtask.isCompleted;
+    subtask.isCompleted = !subtask.isCompleted;
+    await updateTask(task);
+    if (!wasCompleted && subtask.isCompleted) {
+      await notificationService.sendSubtaskCompletionNotification(
+        task,
+        subtask,
+      );
+    }
+    if (task.subTasks.every((st) => st.isCompleted)) {
+      await notificationService.sendAllSubtasksCompletionNotification(task);
+    }
+  }
+
   void editTask(Task task) {
     Navigator.of(context).push(
       MaterialPageRoute(
@@ -116,6 +228,10 @@ class _TaskListState extends State<TaskList> {
                 AddTask(onAdd: (task) => updateTask(task), taskToEdit: task),
       ),
     );
+  }
+
+  void _logout() async {
+    await FirebaseAuth.instance.signOut();
   }
 
   Map<String, List<Task>> _getGroupedTasks() {
@@ -170,114 +286,157 @@ class _TaskListState extends State<TaskList> {
               );
             },
           ),
+          IconButton(
+            icon: Icon(Icons.settings),
+            onPressed: () {
+              Navigator.of(
+                context,
+              ).push(MaterialPageRoute(builder: (context) => SettingsScreen()));
+            },
+          ),
+          PopupMenuButton<String>(
+            onSelected: (value) {
+              if (value == 'logout') {
+                _logout();
+              }
+            },
+            itemBuilder:
+                (BuildContext context) => <PopupMenuEntry<String>>[
+                  PopupMenuItem<String>(
+                    value: 'logout',
+                    child: Row(
+                      children: [
+                        Icon(Icons.logout, size: 18),
+                        SizedBox(width: 8),
+                        Text('Logout'),
+                      ],
+                    ),
+                  ),
+                ],
+          ),
         ],
       ),
-      body:
-          tasks.isEmpty
-              ? Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.task_alt, size: 64, color: Colors.grey),
-                    SizedBox(height: 16),
-                    Text(
-                      'No tasks yet. Add some!',
-                      style: TextStyle(fontSize: 18, color: Colors.grey),
-                    ),
-                    SizedBox(height: 24),
-                    ElevatedButton.icon(
-                      icon: Icon(Icons.add),
-                      label: Text('Add New Task'),
-                      onPressed: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (context) => AddTask(onAdd: addTask),
+      body: Column(
+        children: [
+          Expanded(
+            child:
+                tasks.isEmpty
+                    ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.task_alt, size: 64, color: Colors.grey),
+                          SizedBox(height: 16),
+                          Text(
+                            'No tasks yet. Add some!',
+                            style: TextStyle(fontSize: 18, color: Colors.grey),
                           ),
+                          SizedBox(height: 24),
+                          ElevatedButton.icon(
+                            icon: Icon(Icons.add),
+                            label: Text('Add New Task'),
+                            onPressed: () {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (context) => AddTask(onAdd: addTask),
+                                ),
+                              );
+                            },
+                          ),
+                        ],
+                      ),
+                    )
+                    : ListView.builder(
+                      itemCount: sortedDates.length,
+                      itemBuilder: (context, groupIndex) {
+                        final dateKey = sortedDates[groupIndex];
+                        final tasksInGroup = groupedTasks[dateKey]!;
+                        if (tasksInGroup.isEmpty) return SizedBox.shrink();
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.all(8.0),
+                              child: Row(
+                                children: [
+                                  Text(
+                                    dateKey,
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 18,
+                                      color:
+                                          dateKey == 'Completed'
+                                              ? Colors.green
+                                              : null,
+                                    ),
+                                  ),
+                                  SizedBox(width: 8),
+                                  Text('(${tasksInGroup.length})'),
+                                ],
+                              ),
+                            ),
+                            ...tasksInGroup.map(
+                              (task) => GestureDetector(
+                                onTap: () {
+                                  Navigator.of(context).push(
+                                    MaterialPageRoute(
+                                      builder:
+                                          (context) => TaskDetail(
+                                            key: ValueKey(task.id),
+                                            task: task,
+                                            onUpdate: updateTask,
+                                            onDelete: () => deleteTask(task.id),
+                                            previousSubtaskStates:
+                                                _previousSubtaskStates,
+                                            onSubtaskStatesChanged: (
+                                              taskId,
+                                              states,
+                                            ) {
+                                              setState(() {
+                                                _previousSubtaskStates[taskId] =
+                                                    states;
+                                              });
+                                            },
+                                          ),
+                                    ),
+                                  );
+                                },
+                                child: TaskItem(
+                                  task: task,
+                                  onToggle: () => toggleTaskCompletion(task.id),
+                                  onDelete: () => deleteTask(task.id),
+                                  onEdit: (title) {
+                                    final updatedTask = Task(
+                                      title: title,
+                                      description: task.description,
+                                      isCompleted: task.isCompleted,
+                                      deadline: task.deadline,
+                                      dueTime: task.dueTime,
+                                    );
+                                    updatedTask.id = task.id;
+                                    updateTask(updatedTask);
+                                  },
+                                  onEditPressed: () {
+                                    editTask(task);
+                                  },
+                                ),
+                              ),
+                            ),
+                          ],
                         );
                       },
                     ),
-                  ],
-                ),
-              )
-              : ListView.builder(
-                itemCount: sortedDates.length,
-                itemBuilder: (context, groupIndex) {
-                  final dateKey = sortedDates[groupIndex];
-                  final tasksInGroup = groupedTasks[dateKey]!;
-                  if (tasksInGroup.isEmpty) return SizedBox.shrink();
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: Row(
-                          children: [
-                            Text(
-                              dateKey,
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 18,
-                                color:
-                                    dateKey == 'Completed'
-                                        ? Colors.green
-                                        : null,
-                              ),
-                            ),
-                            SizedBox(width: 8),
-                            Text('(${tasksInGroup.length})'),
-                          ],
-                        ),
-                      ),
-                      ...tasksInGroup
-                          .map(
-                            (task) => GestureDetector(
-                              onTap: () {
-                                Navigator.of(context).push(
-                                  MaterialPageRoute(
-                                    builder:
-                                        (context) => TaskDetail(
-                                          key: ValueKey(task.id),
-                                          task: task,
-                                          onUpdate: updateTask,
-                                          onDelete: () => deleteTask(task.id),
-                                        ),
-                                  ),
-                                );
-                              },
-                              child: TaskItem(
-                                task: task,
-                                onToggle: () => toggleTaskCompletion(task.id),
-                                onDelete: () => deleteTask(task.id),
-                                onEdit: (title) {
-                                  final updatedTask = Task(
-                                    title: title,
-                                    description: task.description,
-                                    isCompleted: task.isCompleted,
-                                    deadline: task.deadline,
-                                    dueTime: task.dueTime,
-                                  );
-                                  updatedTask.id = task.id;
-                                  updateTask(updatedTask);
-                                },
-                                onEditPressed: () {
-                                  editTask(task);
-                                },
-                              ),
-                            ),
-                          )
-                          .toList(),
-                    ],
-                  );
-                },
-              ),
+          ),
+        ],
+      ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
           Navigator.of(context).push(
             MaterialPageRoute(builder: (context) => AddTask(onAdd: addTask)),
           );
         },
-        child: Icon(Icons.add),
         tooltip: 'Add New Task',
+        child: Icon(Icons.add),
       ),
     );
   }

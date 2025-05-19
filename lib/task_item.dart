@@ -7,13 +7,16 @@ class TaskItem extends StatelessWidget {
   final VoidCallback onDelete;
   final Function(String) onEdit;
   final VoidCallback onEditPressed;
-  TaskItem({
+
+  const TaskItem({
+    Key? key,
     required this.task,
     required this.onToggle,
     required this.onDelete,
     required this.onEdit,
     required this.onEditPressed,
-  });
+  }) : super(key: key);
+
   @override
   Widget build(BuildContext context) {
     bool isOverdue = false;
@@ -36,6 +39,7 @@ class TaskItem extends StatelessWidget {
         }
       }
     }
+
     return Card(
       margin: EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
       elevation: 2.0,

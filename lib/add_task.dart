@@ -4,7 +4,7 @@ import 'task.dart';
 class AddTask extends StatefulWidget {
   final Function(Task) onAdd;
   final Task? taskToEdit;
-  AddTask({required this.onAdd, this.taskToEdit});
+  const AddTask({super.key, required this.onAdd, this.taskToEdit});
   @override
   _AddTaskState createState() => _AddTaskState();
 }
@@ -267,8 +267,8 @@ class _AddTaskState extends State<AddTask> {
           );
           Navigator.of(context).pop();
         },
-        child: Icon(Icons.save),
         tooltip: _isEditing ? 'Update Task' : 'Save Task',
+        child: Icon(Icons.save),
       ),
     );
   }

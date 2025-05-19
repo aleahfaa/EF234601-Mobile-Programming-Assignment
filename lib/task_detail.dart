@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:todolist/main.dart';
 import 'task.dart';
 import 'add_task.dart';
 
@@ -6,12 +7,16 @@ class TaskDetail extends StatefulWidget {
   final Task task;
   final Function(Task) onUpdate;
   final VoidCallback onDelete;
-  TaskDetail({
-    Key? key,
+  final Map<int, List<bool>>? previousSubtaskStates;
+  final Function(int, List<bool>)? onSubtaskStatesChanged;
+  const TaskDetail({
+    super.key,
     required this.task,
     required this.onUpdate,
     required this.onDelete,
-  }) : super(key: key);
+    this.previousSubtaskStates,
+    this.onSubtaskStatesChanged,
+  });
   @override
   _TaskDetailState createState() => _TaskDetailState();
 }
@@ -22,6 +27,9 @@ class _TaskDetailState extends State<TaskDetail> {
   void initState() {
     super.initState();
     _currentTask = widget.task;
+    if (_currentTask.deadline != null) {
+      notificationService.scheduleTaskReminderNotification(_currentTask);
+    }
   }
 
   @override
@@ -219,6 +227,20 @@ class _TaskDetailState extends State<TaskDetail> {
                           ),
                         ],
                       ),
+                    SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Icon(Icons.notifications, size: 16),
+                        SizedBox(width: 8),
+                        Text(
+                          'Notification: ${userPreferences.getNotificationTime()} minutes before deadline',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey.shade700,
+                          ),
+                        ),
+                      ],
+                    ),
                   ],
                 ),
               ),
@@ -252,8 +274,7 @@ class _TaskDetailState extends State<TaskDetail> {
                             subTask.title,
                             style: TextStyle(
                               decoration:
-                                  subTask.isCompleted ||
-                                          _currentTask.isCompleted
+                                  subTask.isCompleted
                                       ? TextDecoration.lineThrough
                                       : null,
                             ),
@@ -269,6 +290,8 @@ class _TaskDetailState extends State<TaskDetail> {
                                           List<SubTask>.from(
                                             _currentTask.subTasks,
                                           );
+                                      final oldValue =
+                                          updatedSubTasks[index].isCompleted;
                                       updatedSubTasks[index].isCompleted =
                                           value;
                                       final updatedTask = Task(
@@ -283,6 +306,21 @@ class _TaskDetailState extends State<TaskDetail> {
                                         updatedSubTasks,
                                       );
                                       _handleTaskUpdate(updatedTask);
+                                      if (!oldValue && value) {
+                                        notificationService
+                                            .sendSubtaskCompletionNotification(
+                                              updatedTask,
+                                              updatedSubTasks[index],
+                                            );
+                                        if (updatedSubTasks.every(
+                                          (st) => st.isCompleted,
+                                        )) {
+                                          notificationService
+                                              .sendAllSubtasksCompletionNotification(
+                                                updatedTask,
+                                              );
+                                        }
+                                      }
                                       ScaffoldMessenger.of(
                                         context,
                                       ).showSnackBar(
@@ -312,37 +350,83 @@ class _TaskDetailState extends State<TaskDetail> {
         ),
         backgroundColor:
             _currentTask.isCompleted ? Colors.orange : Colors.green,
-        onPressed: () {
-          final List<SubTask> updatedSubTasks =
-              _currentTask.subTasks.map((subTask) {
-                if (!_currentTask.isCompleted) {
+        onPressed: () async {
+          if (!_currentTask.isCompleted) {
+            if (widget.onSubtaskStatesChanged != null) {
+              final currentStates =
+                  _currentTask.subTasks.map((st) => st.isCompleted).toList();
+              widget.onSubtaskStatesChanged!(_currentTask.id, currentStates);
+            }
+            final List<SubTask> updatedSubTasks =
+                _currentTask.subTasks.map((subTask) {
                   return SubTask(title: subTask.title, isCompleted: true);
-                }
-                return SubTask(
-                  title: subTask.title,
-                  isCompleted: subTask.isCompleted,
-                );
-              }).toList();
-          final updatedTask = Task(
-            title: _currentTask.title,
-            description: _currentTask.description,
-            isCompleted: !_currentTask.isCompleted,
-            deadline: _currentTask.deadline,
-            dueTime: _currentTask.dueTime,
-          );
-          updatedTask.id = _currentTask.id;
-          updatedTask.subTasks.addAll(updatedSubTasks);
-          _handleTaskUpdate(updatedTask);
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                updatedTask.isCompleted
-                    ? 'Task "${_currentTask.title}" marked as completed'
-                    : 'Task "${_currentTask.title}" marked as incomplete',
+                }).toList();
+            final updatedTask = Task(
+              title: _currentTask.title,
+              description: _currentTask.description,
+              isCompleted: true,
+              deadline: _currentTask.deadline,
+              dueTime: _currentTask.dueTime,
+            );
+            updatedTask.id = _currentTask.id;
+            updatedTask.subTasks.addAll(updatedSubTasks);
+            _handleTaskUpdate(updatedTask);
+            await notificationService.sendTaskCompletionNotification(
+              updatedTask,
+            );
+            await notificationService.cancelTaskNotification(updatedTask);
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  'Task "${_currentTask.title}" marked as completed',
+                ),
+                duration: Duration(seconds: 2),
               ),
-              duration: Duration(seconds: 2),
-            ),
-          );
+            );
+          } else {
+            List<SubTask> updatedSubTasks = [];
+            if (widget.previousSubtaskStates != null &&
+                widget.previousSubtaskStates!.containsKey(_currentTask.id)) {
+              final previousStates =
+                  widget.previousSubtaskStates![_currentTask.id]!;
+              for (int i = 0; i < _currentTask.subTasks.length; i++) {
+                final subTask = _currentTask.subTasks[i];
+                final previousState =
+                    i < previousStates.length ? previousStates[i] : false;
+                updatedSubTasks.add(
+                  SubTask(title: subTask.title, isCompleted: previousState),
+                );
+              }
+            } else {
+              updatedSubTasks =
+                  _currentTask.subTasks.map((subTask) {
+                    return SubTask(title: subTask.title, isCompleted: false);
+                  }).toList();
+            }
+            final updatedTask = Task(
+              title: _currentTask.title,
+              description: _currentTask.description,
+              isCompleted: false,
+              deadline: _currentTask.deadline,
+              dueTime: _currentTask.dueTime,
+            );
+            updatedTask.id = _currentTask.id;
+            updatedTask.subTasks.addAll(updatedSubTasks);
+            _handleTaskUpdate(updatedTask);
+            if (updatedTask.deadline != null) {
+              await notificationService.scheduleTaskReminderNotification(
+                updatedTask,
+              );
+            }
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  'Task "${_currentTask.title}" marked as incomplete',
+                ),
+                duration: Duration(seconds: 2),
+              ),
+            );
+          }
         },
       ),
     );
