@@ -190,3 +190,28 @@ flutter pub add awesome_notifications
 <uses-permission android:name="android.permission.ACCESS_NOTIFICATION_POLICY"/>
 ```
 3. If there is an error related to NDK version when the application build in Android, change the NDK version into `ndkVersion = "27.0.12077973"`
+
+# Screenshots
+1. Login page is the first page that the user will see when they are opening the app and has not done any authentication. <br>
+![Login_Page](img/3/login.png)
+2. If the user has not created an account, the login will fail. The user has to create an account first. <br>
+![Login_Fail](img/3/login-fail.png)
+3. Click Create Account button and the user will be directed to Create Account page. <br>
+![SignUp_Page](img/3/signup.png)
+4. If the Create Account or Login process successful, the user will be directed to Home page. <br>
+![Home_Page](img/3/home.png)
+5. In the Home page, the user can find Log Out button. If the user click the Log Out button, the user will be directed to Login Page again. <br>
+![Logout](img/3/logout.png)
+6. Click Setting button to set notification preferences. The user can set the Deadline Reminders (15/30/60/120 minutes before the deadline) and the Task & Subtask Completion notification. <br>
+![Notification_Setting](img/3/notif-preference.png)
+7. The user can also do notification testing for the Deadline Reminders and Task Completion. Notification testing is to see the design of the notification and to see if the push notification already working or not. <br>
+![Notification_Task_Test](img/3/notif-task.png)
+8. If the user mark the task completed, then the notification will be sent. The notification of task completion will send only if the user activate the notification for task completion. <br>
+![Notification_Task](img/3/notif-task.png) <br>
+![Notification_Task_View](img/3/notif-task-view.png)
+9. If the user mark the subtask completed, then the notification will be sent. The notification of subtask completion will send only if the user activate the notification for subtask completion. <br>
+![Notification_Subtask](img/3/notif-subtask.png) <br>
+![Notification_Subtask_View](img/3/notif-subtask-view.png)
+10. If the deadline is approaching (15/30/60/120 minutes before the deadline, depends on user preference), then the user will receive a reminder in forms of notification.
+![Notification_Reminder](img/3/notif-task2.png) <br>
+![Notification_Reminder_View](img/3/notif-task2-view.png)
