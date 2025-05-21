@@ -212,6 +212,6 @@ flutter pub add awesome_notifications
 9. If the user mark the subtask completed, then the notification will be sent. The notification of subtask completion will send only if the user activate the notification for subtask completion. <br>
 ![Notification_Subtask](img/3/notif-subtask.png) <br>
 ![Notification_Subtask_View](img/3/notif-subtask-view.png)
-10. If the deadline is approaching (15/30/60/120 minutes before the deadline, depends on user preference), then the user will receive a reminder in forms of notification.
+10. If the deadline is approaching (15/30/60/120 minutes before the deadline, depends on user preference), then the user will receive a reminder in forms of notification. <br>
 ![Notification_Reminder](img/3/notif-task2.png) <br>
 ![Notification_Reminder_View](img/3/notif-task2-view.png)
